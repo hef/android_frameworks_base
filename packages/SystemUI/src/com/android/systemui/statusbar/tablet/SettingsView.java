@@ -63,8 +63,10 @@ public class SettingsView extends LinearLayout implements View.OnClickListener {
         final Context context = getContext();
 
 	findViewById(R.id.network).setOnClickListener(this);
-        mAirplane = new AirplaneModeController(context,
-                (CompoundButton)findViewById(R.id.airplane_checkbox));
+        /* Removed for Amazon Kindle customization
+        * mAirplane = new AirplaneModeController(context,
+        *        (CompoundButton)findViewById(R.id.airplane_checkbox));
+        */
         findViewById(R.id.network).setOnClickListener(this);
         findViewById(R.id.bluetooth).setOnClickListener(this);
         mBluetooth = new BluetoothController(context,
