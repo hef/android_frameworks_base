@@ -31,22 +31,17 @@ import android.widget.TextView;
 import com.android.systemui.R;
 import com.android.systemui.statusbar.policy.AutoRotateController;
 import com.android.systemui.statusbar.policy.BrightnessController;
-import com.android.systemui.statusbar.policy.BluetoothController;
-import com.android.systemui.statusbar.policy.DoNotDisturbController;
 import com.android.systemui.statusbar.policy.ToggleSlider;
 import com.android.systemui.statusbar.policy.VolumeController;
 import com.android.systemui.statusbar.policy.WifiController;
 
-
 public class SettingsView extends LinearLayout implements View.OnClickListener {
     static final String TAG = "SettingsView";
 
+    WifiController mWifi;
     AutoRotateController mRotate;
     BrightnessController mBrightness;
     VolumeController mVolume;
-    DoNotDisturbController mDoNotDisturb;
-    BluetoothController mBluetooth;
-    WifiController mWifi;
 
     public SettingsView(Context context, AttributeSet attrs) {
         this(context, attrs, 0);
@@ -63,15 +58,7 @@ public class SettingsView extends LinearLayout implements View.OnClickListener {
         final Context context = getContext();
 
 	findViewById(R.id.network).setOnClickListener(this);
-        /* Removed for Amazon Kindle customization
-        * mAirplane = new AirplaneModeController(context,
-        *        (CompoundButton)findViewById(R.id.airplane_checkbox));
-        */
-        findViewById(R.id.network).setOnClickListener(this);
-        findViewById(R.id.bluetooth).setOnClickListener(this);
-        mBluetooth = new BluetoothController(context,
-					     (CompoundButton)findViewById(R.id.bluetooth_checkbox));
-        mWifi = new WifiController(context,
+	mWifi = new WifiController(context,
 				(CompoundButton)findViewById(R.id.wifi_checkbox));
         mRotate = new AutoRotateController(context,
                 (CompoundButton)findViewById(R.id.rotate_checkbox));
@@ -87,9 +74,6 @@ public class SettingsView extends LinearLayout implements View.OnClickListener {
             case R.id.network:
                 onClickNetwork();
                 break;
-            case R.id.bluetooth:
-                onClickBluetooth();
-                break;
             case R.id.settings:
                 onClickSettings();
                 break;
@@ -104,14 +88,6 @@ public class SettingsView extends LinearLayout implements View.OnClickListener {
     // ----------------------------
     private void onClickNetwork() {
         getContext().startActivity(new Intent(Settings.ACTION_WIFI_SETTINGS)
-                .setFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
-        getStatusBarManager().collapse();
-    }
-
-// Bluetooth
-    // ----------------------------
-    private void onClickBluetooth() {
-        getContext().startActivity(new Intent(Settings.ACTION_BLUETOOTH_SETTINGS)
                 .setFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
         getStatusBarManager().collapse();
     }

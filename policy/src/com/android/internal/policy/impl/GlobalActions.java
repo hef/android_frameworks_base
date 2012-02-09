@@ -223,7 +223,7 @@ class GlobalActions implements DialogInterface.OnDismissListener, DialogInterfac
             });
 
         // next: airplane mode
-        mItems.add(mAirplaneModeOn);
+        //mItems.add(mAirplaneModeOn); //disabled for Kindle Fire
 
         // last: silent mode
         if (SHOW_SILENT_TOGGLE) {
