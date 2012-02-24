@@ -5904,7 +5904,7 @@ public class WindowManagerService extends IWindowManager.Stub
             screenLayoutCompatNeeded = false;
         } else {
             // What size is this screen screen?
-            if (longSize >= 960 && shortSize >= 600) {
+            if (longSize >= 960 && shortSize >= 720) {
                 // 1.5xVGA or larger screens at medium density are the point
                 // at which we consider it to be an extra large screen.
                 screenLayoutSize = Configuration.SCREENLAYOUT_SIZE_XLARGE;
