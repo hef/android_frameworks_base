@@ -353,6 +353,9 @@ public class PhoneWindowManager implements WindowManagerPolicy {
     WindowState mFocusedWindow;
     IApplicationToken mFocusedApp;
 
+    // Behavior of volume wake
+    boolean mVolumeWakeScreen;
+
     private final InputHandler mPointerLocationInputHandler = new BaseInputHandler() {
         @Override
         public void handleMotion(MotionEvent event, InputQueue.FinishedCallback finishedCallback) {
@@ -479,6 +482,8 @@ public class PhoneWindowManager implements WindowManagerPolicy {
                     Settings.System.END_BUTTON_BEHAVIOR), false, this);
             resolver.registerContentObserver(Settings.Secure.getUriFor(
                     Settings.Secure.INCALL_POWER_BUTTON_BEHAVIOR), false, this);
+            resolver.registerContentObserver(Settings.System.getUriFor(
+                    Settings.System.VOLUME_WAKE_SCREEN), false, this);
             resolver.registerContentObserver(Settings.System.getUriFor(
                     Settings.System.ACCELEROMETER_ROTATION), false, this);
             resolver.registerContentObserver(Settings.System.getUriFor(
@@ -952,6 +957,8 @@ public class PhoneWindowManager implements WindowManagerPolicy {
             mIncallPowerBehavior = Settings.Secure.getInt(resolver,
                     Settings.Secure.INCALL_POWER_BUTTON_BEHAVIOR,
                     Settings.Secure.INCALL_POWER_BUTTON_BEHAVIOR_DEFAULT);
+            mVolumeWakeScreen = (Settings.System.getInt(resolver,
+                    Settings.System.VOLUME_WAKE_SCREEN, 0) == 1);
             int accelerometerDefault = Settings.System.getInt(resolver,
                     Settings.System.ACCELEROMETER_ROTATION, DEFAULT_ACCELEROMETER_ROTATION);
             
@@ -2414,7 +2421,6 @@ public class PhoneWindowManager implements WindowManagerPolicy {
     public int finishAnimationLw() {
         int changes = 0;
         boolean topIsFullscreen = false;
-
         final WindowManager.LayoutParams lp = (mTopFullscreenOpaqueWindowState != null)
                 ? mTopFullscreenOpaqueWindowState.getAttrs()
                 : null;
@@ -2439,7 +2445,7 @@ public class PhoneWindowManager implements WindowManagerPolicy {
                 // case though.
                 if (topIsFullscreen) {
                     if (mStatusBarCanHide ||
-                        (((updateSystemUiVisibilityLw() & View.SYSTEM_UI_FLAG_LOW_PROFILE) == 1) &&
+                        (((mFocusedWindow != null) && (mFocusedWindow.getSystemUiVisibility() & View.SYSTEM_UI_FLAG_LOW_PROFILE) == 1) &&
                          (Settings.System.getInt(mContext.getContentResolver(),
                                                  Settings.System.COMBINED_BAR_AUTO_HIDE, 0) == 1))) {
                         if (DEBUG_LAYOUT) Log.v(TAG, "Hiding status bar");
@@ -2454,7 +2460,13 @@ public class PhoneWindowManager implements WindowManagerPolicy {
                                 }
                             }});
                         }
-                    } else if (DEBUG_LAYOUT) {
+                    }
+                    else if (((mFocusedWindow != null) && (mFocusedWindow.getSystemUiVisibility() & View.SYSTEM_UI_FLAG_LOW_PROFILE) == 0) &&
+                             (Settings.System.getInt(mContext.getContentResolver(),
+                                                     Settings.System.COMBINED_BAR_AUTO_HIDE, 0) == 1)) {
+                        if (mStatusBar.showLw(true)) changes |= FINISH_LAYOUT_REDO_LAYOUT;
+                    }
+                    else if (DEBUG_LAYOUT) {
                         Log.v(TAG, "Preventing status bar from hiding by policy");
                     }
                 } else {
@@ -2745,7 +2757,7 @@ public class PhoneWindowManager implements WindowManagerPolicy {
     public int interceptKeyBeforeQueueing(KeyEvent event, int policyFlags, boolean isScreenOn) {
         final boolean down = event.getAction() == KeyEvent.ACTION_DOWN;
         final boolean canceled = event.isCanceled();
-        final int keyCode = event.getKeyCode();
+        int keyCode = event.getKeyCode();
 
         final boolean isInjected = (policyFlags & WindowManagerPolicy.FLAG_INJECTED) != 0;
 
@@ -2790,7 +2802,15 @@ public class PhoneWindowManager implements WindowManagerPolicy {
             result = 0;
 
             final boolean isWakeKey = (policyFlags
-                    & (WindowManagerPolicy.FLAG_WAKE | WindowManagerPolicy.FLAG_WAKE_DROPPED)) != 0;
+                    & (WindowManagerPolicy.FLAG_WAKE | WindowManagerPolicy.FLAG_WAKE_DROPPED)) != 0
+                    || ((keyCode == KeyEvent.KEYCODE_VOLUME_UP) && mVolumeWakeScreen)
+                    || ((keyCode == KeyEvent.KEYCODE_VOLUME_DOWN) && mVolumeWakeScreen);
+
+            // make sure keyevent get's handled as power key on volume-wake
+            if(!isScreenOn && mVolumeWakeScreen && isWakeKey && ((keyCode == KeyEvent.KEYCODE_VOLUME_UP)
+                    || (keyCode == KeyEvent.KEYCODE_VOLUME_DOWN)))
+                keyCode=KeyEvent.KEYCODE_POWER;
+
             if (down && isWakeKey) {
                 if (keyguardActive) {
                     // If the keyguard is showing, let it decide what to do with the wake key.
@@ -2911,6 +2931,9 @@ public class PhoneWindowManager implements WindowManagerPolicy {
             }
 
             case KeyEvent.KEYCODE_POWER: {
+                if ((mTopFullscreenOpaqueWindowState.getAttrs().flags & WindowManager.LayoutParams.PREVENT_POWER_KEY) != 0){
+                    return result;
+                }
                 result &= ~ACTION_PASS_TO_USER;
                 if (down) {
                     if (isScreenOn && !mPowerKeyTriggered
